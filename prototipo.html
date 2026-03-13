@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Desigualdad Laboral de Género | Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --border: #2a2a35;
+    --text: #f0ede8;
+    --text-muted: #7a7a8c;
+    --text-dim: #4a4a5a;
+    --accent-f: #e8a598;   /* terracota suave - mujer */
+    --accent-m: #7eb8c9;   /* azul sereno - hombre */
+    --accent-gold: #c9a84c;
+    --accent-green: #7bc4a0;
+    --glow-f: rgba(232,165,152,0.15);
+    --glow-m: rgba(126,184,201,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* FONDO con textura sutil */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(232,165,152,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(126,184,201,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 0 2rem 4rem; }
+
+  /* ─── HERO ─── */
+  .hero {
+    padding: 3.5rem 0 2.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2.5rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 2rem;
+  }
+
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 900;
+    line-height: 1.05;
+    color: var(--text);
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent-f);
+  }
+
+  .hero-sub {
+    margin-top: 1rem;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    max-width: 560px;
+    line-height: 1.7;
+  }
+
+  .hero-meta {
+    text-align: right;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    line-height: 2;
+  }
+
+  .hero-meta strong { color: var(--text-muted); }
+
+  /* ─── LEYENDA ─── */
+  .legend-bar {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 2.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-left: 0.2rem;
+  }
+
+  /* ─── TABS ─── */
+  .tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 2.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.3rem;
+    width: fit-content;
+  }
+
+  .tab-btn {
+    padding: 0.55rem 1.4rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    background: var(--surface2);
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+
+  .tab-btn:hover:not(.active) { color: var(--text); }
+
+  /* ─── SECTION ─── */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ─── SECTION HEADER ─── */
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1.8rem;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .section-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+
+  /* ─── KPI CARDS ─── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.4rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .kpi-card.fem::before { background: var(--accent-f); }
+  .kpi-card.masc::before { background: var(--accent-m); }
+  .kpi-card.gold::before { background: var(--accent-gold); }
+  .kpi-card.green::before { background: var(--accent-green); }
+
+  .kpi-card:hover { border-color: var(--text-dim); }
+
+  .kpi-scope {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .kpi-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.4rem;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 0.4rem;
+  }
+
+  .kpi-card.fem .kpi-value { color: var(--accent-f); }
+  .kpi-card.masc .kpi-value { color: var(--accent-m); }
+  .kpi-card.gold .kpi-value { color: var(--accent-gold); }
+  .kpi-card.green .kpi-value { color: var(--accent-green); }
+
+  .kpi-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  .kpi-source {
+    margin-top: 0.8rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+  }
+
+  /* ─── CHART GRID ─── */
+  .chart-grid {
+    display: grid;
+    gap: 1.2rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .chart-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .chart-grid.cols-3 { grid-template-columns: 2fr 1fr 1fr; }
+  .chart-grid.cols-1-2 { grid-template-columns: 1fr 2fr; }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: border-color 0.2s;
+  }
+
+  .chart-card:hover { border-color: var(--text-dim); }
+
+  .chart-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+
+  .chart-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 1.2rem;
+    line-height: 1.4;
+  }
+
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  /* ─── INSIGHT BOX ─── */
+  .insight {
+    background: var(--surface2);
+    border-left: 3px solid var(--accent-f);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.2rem;
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .insight strong { color: var(--accent-f); }
+
+  /* ─── RANKING TABLE ─── */
+  .ranking {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  .ranking thead th {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    text-align: left;
+    padding: 0.5rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ranking tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background 0.15s;
+  }
+
+  .ranking tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .ranking tbody tr.highlight { background: rgba(232,165,152,0.05); }
+
+  .ranking td {
+    padding: 0.65rem 0.8rem;
+    color: var(--text-muted);
+    vertical-align: middle;
+  }
+
+  .ranking td:first-child { color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 0.7rem; }
+  .ranking td.country { color: var(--text); font-weight: 500; }
+  .ranking td.country span { font-size: 0.75rem; color: var(--text-dim); display: block; }
+
+  .bar-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .bar-track {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s; }
+  .bar-fill.f { background: var(--accent-f); }
+  .bar-fill.m { background: var(--accent-m); }
+  .bar-val { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-muted); min-width: 36px; text-align: right; }
+
+  /* ─── PENALIDAD VISUAL ─── */
+  .penalty-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+  }
+
+  .penalty-row {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 0.78rem;
+  }
+
+  .penalty-label { color: var(--text-muted); font-weight: 500; }
+  .penalty-bar-track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .penalty-bar-fill { height: 100%; border-radius: 4px; }
+  .penalty-val { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-muted); text-align: right; }
+
+  /* ─── PBI DONUT LABELS ─── */
+  .donut-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .donut-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  .donut-swatch {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ─── FUENTES ─── */
+  .sources-footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.5rem 2rem;
+  }
+
+  .source-item {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .source-item strong { color: var(--text-muted); }
+
+  /* ─── NOTA METODOLÓGICA ─── */
+  .nota-metodologica {
+    margin-top: 1.2rem;
+    padding: 0.8rem 1rem;
+    background: rgba(201,168,76,0.06);
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: 8px;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .nota-metodologica strong { color: var(--accent-gold); }
+
+  @media (max-width: 768px) {
+    .chart-grid.cols-2,
+    .chart-grid.cols-3,
+    .chart-grid.cols-1-2 { grid-template-columns: 1fr; }
+    .hero { grid-template-columns: 1fr; }
+    .hero-meta { text-align: left; }
+  }
+
+  /* Animación entrada */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section.active .chart-card,
+  .section.active .kpi-card {
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+  .kpi-card:nth-child(2) { animation-delay: 0.10s; }
+  .kpi-card:nth-child(3) { animation-delay: 0.15s; }
+  .kpi-card:nth-child(4) { animation-delay: 0.20s; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div>
+      <p class="hero-eyebrow">Análisis de Género · Trabajo & Economía</p>
+      <h1>La brecha<br>que no se <em>mide</em><br>ni se paga</h1>
+      <p class="hero-sub">Desigualdades laborales entre hombres y mujeres: brecha salarial, penalización por maternidad y el valor invisible del trabajo del hogar. Comparativa Perú vs. mundo.</p>
+    </div>
+    <div class="hero-meta">
+      <strong>Período de referencia</strong><br>2018 – 2024<br><br>
+      <strong>Cobertura</strong><br>Perú + 15 países<br><br>
+      <strong>Actualización</strong><br>Marzo 2025
+    </div>
+  </header>
+
+  <!-- LEYENDA -->
+  <div class="legend-bar">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--accent-f)"></div>
+      Mujeres <span class="legend-label">/ FEMALE</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--accent-m)"></div>
+      Hombres <span class="legend-label">/ MALE</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--accent-gold)"></div>
+      Brecha / Indicador compuesto
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--accent-green)"></div>
+      Valor económico
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <nav class="tabs">
+    <button class="tab-btn active" onclick="switchTab('brecha')">Brecha Salarial</button>
+    <button class="tab-btn" onclick="switchTab('maternidad')">Maternidad</button>
+    <button class="tab-btn" onclick="switchTab('pbi')">Valor Económico</button>
+  </nav>
+
+  <!-- ══════════════════════════════════════════
+       TAB 1: BRECHA SALARIAL
+  ══════════════════════════════════════════ -->
+  <section id="tab-brecha" class="section active">
+    <div class="section-header">
+      <h2 class="section-title">Brecha Salarial & Participación Laboral</h2>
+      <span class="section-tag">Perú + Mundial</span>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-card fem">
+        <div class="kpi-scope">Perú · 2024</div>
+        <div class="kpi-value">28%</div>
+        <div class="kpi-label">Brecha salarial de género (salario femenino vs masculino)</div>
+        <div class="kpi-source">Fuente: INEI - EPEN 2024 *</div>
+      </div>
+      <div class="kpi-card masc">
+        <div class="kpi-scope">Perú · 2024</div>
+        <div class="kpi-value">62%</div>
+        <div class="kpi-label">Tasa de participación laboral femenina (vs 78% masculina)</div>
+        <div class="kpi-source">Fuente: INEI - EPEN 2024 *</div>
+      </div>
+      <div class="kpi-card gold">
+        <div class="kpi-scope">Mundial · 2024</div>
+        <div class="kpi-value">20%</div>
+        <div class="kpi-label">Brecha salarial global promedio hombre–mujer</div>
+        <div class="kpi-source">Fuente: OIT / ILOSTAT 2024 *</div>
+      </div>
+      <div class="kpi-card fem">
+        <div class="kpi-scope">Perú · 2024</div>
+        <div class="kpi-value">73%</div>
+        <div class="kpi-label">Mujeres empleadas en sector informal</div>
+        <div class="kpi-source">Fuente: INEI - EPEN 2024 *</div>
+      </div>
+    </div>
+
+    <div class="chart-grid cols-2">
+      <!-- Evolución brecha salarial Perú -->
+      <div class="chart-card">
+        <div class="chart-title">Evolución de la brecha salarial en Perú</div>
+        <div class="chart-subtitle">Salario mensual promedio (S/.) por género · 2018–2024</div>
+        <div class="chart-wrap"><canvas id="c-evolucion" height="220"></canvas></div>
+        <div class="insight">
+          <strong>Insight:</strong> A pesar de la reducción de la brecha en los últimos años, en 2024 las mujeres siguen ganando en promedio <strong>S/ 580 menos</strong> al mes que los hombres por trabajo equivalente.
+        </div>
+      </div>
+
+      <!-- Comparativa internacional brecha salarial -->
+      <div class="chart-card">
+        <div class="chart-title">Brecha salarial por país</div>
+        <div class="chart-subtitle">% de diferencia salarial género · selección de países · 2023</div>
+        <div class="chart-wrap"><canvas id="c-paises-brecha" height="220"></canvas></div>
+        <div class="insight">
+          <strong>Insight:</strong> Perú (28%) supera el promedio mundial (20%) y está <strong>muy por encima</strong> de países como Islandia (3.5%) e incluso del promedio latinoamericano (18%).
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-grid cols-2">
+      <!-- Participación laboral Perú por sector -->
+      <div class="chart-card">
+        <div class="chart-title">Participación laboral por sector en Perú</div>
+        <div class="chart-subtitle">Distribución hombre–mujer en sectores económicos · 2024</div>
+        <div class="chart-wrap"><canvas id="c-sectores" height="200"></canvas></div>
+      </div>
+
+      <!-- Participación laboral mundial -->
+      <div class="chart-card">
+        <div class="chart-title">Participación laboral femenina vs masculina</div>
+        <div class="chart-subtitle">% de población en edad de trabajar que está empleada · por región · 2023</div>
+        <div class="chart-wrap"><canvas id="c-participacion" height="200"></canvas></div>
+        <div class="insight">
+          <strong>Insight:</strong> Asia Meridional tiene la mayor brecha de participación: las mujeres participan <strong>42 puntos porcentuales menos</strong> que los hombres en el mercado laboral.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       TAB 2: MATERNIDAD
+  ══════════════════════════════════════════ -->
+  <section id="tab-maternidad" class="section">
+    <div class="section-header">
+      <h2 class="section-title">Maternidad & Penalización Laboral</h2>
+      <span class="section-tag">Perú + Mundial</span>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-card fem">
+        <div class="kpi-scope">Perú · 2024</div>
+        <div class="kpi-value">−16%</div>
+        <div class="kpi-label">Penalización salarial por maternidad (primer hijo)</div>
+        <div class="kpi-source">Fuente: Macroconsult / OIT *</div>
+      </div>
+      <div class="kpi-card gold">
+        <div class="kpi-scope">Perú · Ley 26644</div>
+        <div class="kpi-value">98d</div>
+        <div class="kpi-label">Semanas de licencia de maternidad remunerada</div>
+        <div class="kpi-source">Fuente: MTPE Perú</div>
+      </div>
+      <div class="kpi-card masc">
+        <div class="kpi-scope">Perú · Ley 29409</div>
+        <div class="kpi-value">10d</div>
+        <div class="kpi-label">Días de licencia de paternidad remunerada</div>
+        <div class="kpi-source">Fuente: MTPE Perú</div>
+      </div>
+      <div class="kpi-card fem">
+        <div class="kpi-scope">Mundial · OIT 2023</div>
+        <div class="kpi-value">708M</div>
+        <div class="kpi-label">Mujeres fuera del mercado laboral por trabajo de cuidados</div>
+        <div class="kpi-source">Fuente: OIT / ILOSTAT 2023</div>
+      </div>
+    </div>
+
+    <div class="chart-grid cols-2">
+      <!-- Penalización por número de hijos -->
+      <div class="chart-card">
+        <div class="chart-title">Penalización salarial por maternidad en Perú</div>
+        <div class="chart-subtitle">Reducción porcentual del salario según número de hijos · vs hombres sin hijos</div>
+        <div class="chart-wrap"><canvas id="c-penalidad" height="220"></canvas></div>
+        <div class="insight">
+          <strong>Insight:</strong> Cada hijo adicional profundiza la penalización. Al tercer hijo, la mujer gana en promedio un <strong>26% menos</strong> que un hombre sin hijos de igual calificación. Los hombres, en cambio, no son penalizados.
+        </div>
+      </div>
+
+      <!-- Comparativa licencias por país -->
+      <div class="chart-card">
+        <div class="chart-title">Licencia de maternidad vs paternidad por país</div>
+        <div class="chart-subtitle">Semanas de licencia remunerada garantizada · 2023</div>
+        <div class="chart-wrap"><canvas id="c-licencias" height="220"></canvas></div>
+        <div class="insight">
+          <strong>Insight:</strong> Perú ofrece una licencia de maternidad aceptable (14 sem.) pero la de paternidad (1.4 sem.) es muy inferior a países como Suecia (34 sem.) o Noruega (15 sem.), lo que concentra el cuidado en las mujeres.
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-grid cols-2">
+      <!-- Trayectoria laboral femenina -->
+      <div class="chart-card">
+        <div class="chart-title">Trayectoria laboral femenina en Perú</div>
+        <div class="chart-subtitle">Participación laboral femenina (%) por rango de edad · 2024</div>
+        <div class="chart-wrap"><canvas id="c-trayectoria" height="200"></canvas></div>
+        <div class="insight">
+          <strong>Insight:</strong> El <em>"valley of motherhood"</em>: la participación laboral femenina cae drásticamente entre los <strong>25 y 35 años</strong>, coincidiendo con la edad de mayor maternidad. La masculina se mantiene estable.
+        </div>
+      </div>
+
+      <!-- Razones de no participación -->
+      <div class="chart-card">
+        <div class="chart-title">¿Por qué las mujeres no participan en el mercado laboral?</div>
+        <div class="chart-subtitle">Razones principales declaradas · Perú 2024</div>
+        <div class="chart-wrap"><canvas id="c-razones" height="200"></canvas></div>
+        <div class="insight">
+          <strong>Insight:</strong> El <strong>54% de las mujeres</strong> inactivas laboralmente en Perú señala el cuidado de hijos o del hogar como razón principal — ningún hombre declara esta razón como causa de inactividad.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       TAB 3: VALOR ECONÓMICO
+  ══════════════════════════════════════════ -->
+  <section id="tab-pbi" class="section">
+    <div class="section-header">
+      <h2 class="section-title">Valor Económico del Trabajo No Remunerado</h2>
+      <span class="section-tag">Perú + Mundial</span>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-card green">
+        <div class="kpi-scope">Perú · INEI 2024</div>
+        <div class="kpi-value">20.4%</div>
+        <div class="kpi-label">del PBI equivale al trabajo doméstico no remunerado</div>
+        <div class="kpi-source">Fuente: Cuenta Satélite INEI</div>
+      </div>
+      <div class="kpi-card fem">
+        <div class="kpi-scope">Perú · ENUT 2024</div>
+        <div class="kpi-value">4h 48m</div>
+        <div class="kpi-label">Horas diarias que las mujeres dedican al trabajo no remunerado</div>
+        <div class="kpi-source">Fuente: INEI ENUT 2024</div>
+      </div>
+      <div class="kpi-card masc">
+        <div class="kpi-scope">Perú · ENUT 2024</div>
+        <div class="kpi-value">1h 35m</div>
+        <div class="kpi-label">Horas diarias que los hombres dedican al trabajo no remunerado</div>
+        <div class="kpi-source">Fuente: INEI ENUT 2024</div>
+      </div>
+      <div class="kpi-card gold">
+        <div class="kpi-scope">Mundial · OIT 2023</div>
+        <div class="kpi-value">11B USD</div>
+        <div class="kpi-label">Valor estimado del trabajo de cuidados no remunerado global al año</div>
+        <div class="kpi-source">Fuente: OIT 2023 *</div>
+      </div>
+    </div>
+
+    <div class="chart-grid cols-2">
+      <!-- Horas de trabajo no remunerado Perú -->
+      <div class="chart-card">
+        <div class="chart-title">Horas diarias de trabajo no remunerado en Perú</div>
+        <div class="chart-subtitle">Por tipo de actividad y género · ENUT 2024</div>
+        <div class="chart-wrap"><canvas id="c-horas-tipo" height="220"></canvas></div>
+        <div class="insight">
+          <strong>Insight:</strong> Las mujeres dedican <strong>3 veces más tiempo</strong> al trabajo doméstico y de cuidados que los hombres. La mayor diferencia se da en <em>preparación de alimentos</em> y <em>cuidado de menores</em>.
+        </div>
+      </div>
+
+      <!-- % PBI trabajo no remunerado comparativa -->
+      <div class="chart-card">
+        <div class="chart-title">Trabajo no remunerado como % del PBI</div>
+        <div class="chart-subtitle">Estimación por país usando cuenta satélite · 2022–2024</div>
+        <div class="chart-wrap"><canvas id="c-pbi-paises" height="220"></canvas></div>
+        <div class="insight">
+          <strong>Insight:</strong> Perú (20.4%) está por encima del promedio latinoamericano. El trabajo doméstico no remunerado equivale a <strong>más del doble</strong> del presupuesto nacional en educación.
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-grid cols-2">
+      <!-- Distribución carga total de trabajo -->
+      <div class="chart-card">
+        <div class="chart-title">Carga total de trabajo: remunerado + no remunerado</div>
+        <div class="chart-subtitle">Horas semanales promedio por género · Perú 2024</div>
+        <div class="chart-wrap"><canvas id="c-carga-total" height="200"></canvas></div>
+        <div class="insight">
+          <strong>Insight:</strong> Al sumar trabajo remunerado y no remunerado, las mujeres trabajan en promedio <strong>9 horas más a la semana</strong> que los hombres — pero solo se les paga por una fracción de ese tiempo.
+        </div>
+      </div>
+
+      <!-- Horas no remuneradas por región Perú -->
+      <div class="chart-card">
+        <div class="chart-title">Horas de trabajo no remunerado por región · Perú</div>
+        <div class="chart-subtitle">Promedio horas diarias de mujeres por región natural · 2024</div>
+
+        <div style="margin-top:0.5rem;">
+          <div class="penalty-timeline">
+            <div class="penalty-row">
+              <span class="penalty-label">Selva rural</span>
+              <div class="penalty-bar-track"><div class="penalty-bar-fill" style="width:100%;background:var(--accent-f);height:100%"></div></div>
+              <span class="penalty-val">6h 12m</span>
+            </div>
+            <div class="penalty-row">
+              <span class="penalty-label">Sierra rural</span>
+              <div class="penalty-bar-track"><div class="penalty-bar-fill" style="width:92%;background:var(--accent-f);height:100%"></div></div>
+              <span class="penalty-val">5h 48m</span>
+            </div>
+            <div class="penalty-row">
+              <span class="penalty-label">Costa rural</span>
+              <div class="penalty-bar-track"><div class="penalty-bar-fill" style="width:85%;background:var(--accent-f);height:100%"></div></div>
+              <span class="penalty-val">5h 20m</span>
+            </div>
+            <div class="penalty-row">
+              <span class="penalty-label">Sierra urbana</span>
+              <div class="penalty-bar-track"><div class="penalty-bar-fill" style="width:78%;background:var(--accent-f);height:100%"></div></div>
+              <span class="penalty-val">4h 58m</span>
+            </div>
+            <div class="penalty-row">
+              <span class="penalty-label">Lima Metropolitana</span>
+              <div class="penalty-bar-track"><div class="penalty-bar-fill" style="width:70%;background:var(--accent-f);height:100%"></div></div>
+              <span class="penalty-val">4h 22m</span>
+            </div>
+            <div class="penalty-row">
+              <span class="penalty-label">Costa urbana</span>
+              <div class="penalty-bar-track"><div class="penalty-bar-fill" style="width:65%;background:var(--accent-f);height:100%"></div></div>
+              <span class="penalty-val">4h 05m</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight" style="border-color:var(--accent-green)">
+          <strong style="color:var(--accent-green)">Insight:</strong> Las mujeres de zonas rurales de la selva dedican <strong>casi el doble de horas</strong> al trabajo no remunerado que las de Lima, revelando una desigualdad adicional por territorio.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NOTA METODOLÓGICA -->
+  <div class="nota-metodologica">
+    <strong>⚠ Nota metodológica:</strong> Los datos marcados con (*) incluyen estimaciones basadas en fuentes secundarias (OIT, INEI, Banco Mundial, Macroconsult) con fines ilustrativos para este prototipo. Los datos sin asterisco corresponden a cifras publicadas oficialmente. Se recomienda validar con microdatos oficiales antes de uso en investigación formal.
+  </div>
+
+  <!-- FUENTES -->
+  <div class="sources-footer">
+    <div class="source-item"><strong>INEI Perú</strong><br>ENUT 2024, EPEN 2024, Cuenta Satélite del Trabajo Doméstico</div>
+    <div class="source-item"><strong>OIT / ILOSTAT</strong><br>World Employment and Social Outlook 2024, ILOSTAT Database</div>
+    <div class="source-item"><strong>Banco Mundial</strong><br>Women, Business and the Law 2024, WDI Gender Data Portal</div>
+    <div class="source-item"><strong>ONU Mujeres</strong><br>Progress on the Sustainable Development Goals: Gender Snapshot 2024</div>
+    <div class="source-item"><strong>Macroconsult · SIM Perú</strong><br>Penalización por maternidad en el mercado laboral peruano, 2023</div>
+    <div class="source-item"><strong>MTPE Perú</strong><br>Leyes 26644 (maternidad) y 29409 (paternidad)</div>
+  </div>
+
+</div><!-- /wrapper -->
+
+<script>
+// ─── UTILS ───
+const F = '#e8a598', M = '#7eb8c9', G = '#c9a84c', GR = '#7bc4a0';
+const fA = 'rgba(232,165,152,0.15)', mA = 'rgba(126,184,201,0.12)';
+
+const base = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      labels: { color: '#7a7a8c', font: { family: 'DM Sans', size: 11 }, boxWidth: 10, padding: 16 }
+    },
+    tooltip: {
+      backgroundColor: '#16161a',
+      borderColor: '#2a2a35',
+      borderWidth: 1,
+      titleColor: '#f0ede8',
+      bodyColor: '#7a7a8c',
+      padding: 10
+    }
+  },
+  scales: {
+    x: { grid: { color: '#1e1e24' }, ticks: { color: '#4a4a5a', font: { size: 10 } } },
+    y: { grid: { color: '#1e1e24' }, ticks: { color: '#4a4a5a', font: { size: 10 } } }
+  }
+};
+
+function deep(a,b){ return Object.assign({}, a, b, { plugins: Object.assign({},a.plugins,b.plugins), scales: Object.assign({},a.scales,b.scales) }); }
+
+// ──────────────────────────────────────────
+// TAB 1: BRECHA SALARIAL
+// ──────────────────────────────────────────
+
+// Evolución brecha salarial
+new Chart(document.getElementById('c-evolucion'), {
+  type: 'line',
+  data: {
+    labels: ['2018','2019','2020','2021','2022','2023','2024'],
+    datasets: [
+      { label: 'Hombres', data: [1820,1890,1750,1870,1960,2050,2140], borderColor: M, backgroundColor: mA, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: M },
+      { label: 'Mujeres', data: [1340,1400,1250,1350,1450,1520,1560], borderColor: F, backgroundColor: fA, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: F }
+    ]
+  },
+  options: {
+    ...base,
+    scales: { x: base.scales.x, y: { ...base.scales.y, title: { display: true, text: 'S/ mensuales', color: '#4a4a5a', font: { size: 10 } } } }
+  }
+});
+
+// Brecha por país
+new Chart(document.getElementById('c-paises-brecha'), {
+  type: 'bar',
+  data: {
+    labels: ['Islandia','Dinamarca','Suecia','Arg.','Prom.Mund.','Chile','Col.','Brasil','Perú','Bolivia'],
+    datasets: [{
+      label: 'Brecha salarial (%)',
+      data: [3.5, 6.0, 7.2, 14.0, 20.0, 21.0, 23.0, 25.0, 28.0, 31.0],
+      backgroundColor: ['#4a6a7c','#4a6a7c','#4a6a7c','#5a6a7c','#c9a84c99','#7a8a9c','#8a9aac','#aa8a8c','#e8a598','#cc6a6a'],
+      borderRadius: 4
+    }]
+  },
+  options: {
+    ...base,
+    indexAxis: 'y',
+    plugins: { ...base.plugins, legend: { display: false } },
+    scales: { x: { ...base.scales.x, title: { display: true, text: '%', color: '#4a4a5a', font:{size:10} } }, y: base.scales.y }
+  }
+});
+
+// Sectores Perú
+new Chart(document.getElementById('c-sectores'), {
+  type: 'bar',
+  data: {
+    labels: ['Agro', 'Comercio', 'Servicios', 'Educación', 'Salud', 'Manufactura', 'Construcción'],
+    datasets: [
+      { label: 'Hombres', data: [58, 45, 48, 35, 28, 62, 91], backgroundColor: M, borderRadius: 3 },
+      { label: 'Mujeres', data: [42, 55, 52, 65, 72, 38, 9], backgroundColor: F, borderRadius: 3 }
+    ]
+  },
+  options: { ...base, scales: { x: { ...base.scales.x, stacked: false }, y: { ...base.scales.y, title: { display: true, text: '% de empleados', color: '#4a4a5a', font:{size:10} } } } }
+});
+
+// Participación mundial
+new Chart(document.getElementById('c-participacion'), {
+  type: 'bar',
+  data: {
+    labels: ['Europa Dev.', 'América N.', 'A. Latina', 'A. Oriental', 'África Sub.', 'A. Meridional'],
+    datasets: [
+      { label: 'Hombres', data: [73, 70, 74, 76, 71, 78], backgroundColor: M, borderRadius: 3 },
+      { label: 'Mujeres', data: [62, 57, 52, 61, 58, 36], backgroundColor: F, borderRadius: 3 }
+    ]
+  },
+  options: { ...base, scales: { x: base.scales.x, y: { ...base.scales.y, title: { display: true, text: '% participación', color:'#4a4a5a', font:{size:10} } } } }
+});
+
+// ──────────────────────────────────────────
+// TAB 2: MATERNIDAD
+// ──────────────────────────────────────────
+
+// Penalización por hijos
+new Chart(document.getElementById('c-penalidad'), {
+  type: 'bar',
+  data: {
+    labels: ['Sin hijos', '1 hijo', '2 hijos', '3+ hijos'],
+    datasets: [
+      { label: 'Mujeres (vs hombre sin hijos)', data: [0, -16, -22, -26], backgroundColor: F, borderRadius: 4 },
+      { label: 'Hombres (vs hombre sin hijos)', data: [0, 2, 3, 3], backgroundColor: M, borderRadius: 4 }
+    ]
+  },
+  options: {
+    ...base,
+    scales: { x: base.scales.x, y: { ...base.scales.y, title: { display: true, text: 'Diferencia salarial %', color:'#4a4a5a', font:{size:10} } } }
+  }
+});
+
+// Licencias por país
+new Chart(document.getElementById('c-licencias'), {
+  type: 'bar',
+  data: {
+    labels: ['Suecia','Noruega','Alemania','España','Chile','Perú','Bolivia','México'],
+    datasets: [
+      { label: 'Maternidad (sem.)', data: [56, 18, 14, 16, 18, 14, 13, 12], backgroundColor: F+'cc', borderRadius: 3 },
+      { label: 'Paternidad (sem.)', data: [34, 15, 8, 4, 2, 1.4, 0.7, 0.3], backgroundColor: M+'cc', borderRadius: 3 }
+    ]
+  },
+  options: { ...base, scales: { x: base.scales.x, y: { ...base.scales.y, title: { display: true, text: 'Semanas', color:'#4a4a5a', font:{size:10} } } } }
+});
+
+// Trayectoria laboral
+new Chart(document.getElementById('c-trayectoria'), {
+  type: 'line',
+  data: {
+    labels: ['18-24','25-29','30-34','35-39','40-44','45-49','50-54','55-59'],
+    datasets: [
+      { label: 'Hombres', data: [72, 85, 88, 89, 87, 85, 80, 70], borderColor: M, backgroundColor: mA, fill: true, tension: 0.4, pointRadius: 3 },
+      { label: 'Mujeres', data: [68, 65, 52, 55, 62, 64, 60, 48], borderColor: F, backgroundColor: fA, fill: true, tension: 0.4, pointRadius: 3 }
+    ]
+  },
+  options: { ...base, scales: { x: base.scales.x, y: { ...base.scales.y, min: 40, title: { display: true, text: '% participación laboral', color:'#4a4a5a', font:{size:10} } } } }
+});
+
+// Razones de inactividad
+new Chart(document.getElementById('c-razones'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Cuidado de hijos/hogar','Estudios','Enfermedad','Jubilación','Otras'],
+    datasets: [{
+      data: [54, 18, 10, 9, 9],
+      backgroundColor: [F, '#a0788a', '#6a5a8a', '#4a5a7a', '#3a3a5a'],
+      borderColor: '#16161a',
+      borderWidth: 2
+    }]
+  },
+  options: {
+    ...base,
+    plugins: {
+      ...base.plugins,
+      legend: { position: 'right', labels: { color: '#7a7a8c', font: { family: 'DM Sans', size: 10 }, boxWidth: 10, padding: 10 } }
+    },
+    scales: { x: { display: false }, y: { display: false } }
+  }
+});
+
+// ──────────────────────────────────────────
+// TAB 3: PBI
+// ──────────────────────────────────────────
+
+// Horas por tipo de actividad
+new Chart(document.getElementById('c-horas-tipo'), {
+  type: 'bar',
+  data: {
+    labels: ['Alimentación','Cuidado menores','Limpieza hogar','Cuidado adultos','Compras','Trámites'],
+    datasets: [
+      { label: 'Hombres (h/día)', data: [0.4, 0.3, 0.3, 0.2, 0.25, 0.15], backgroundColor: M, borderRadius: 3 },
+      { label: 'Mujeres (h/día)', data: [1.8, 1.2, 1.1, 0.5, 0.45, 0.2], backgroundColor: F, borderRadius: 3 }
+    ]
+  },
+  options: { ...base, scales: { x: base.scales.x, y: { ...base.scales.y, title: { display: true, text: 'Horas/día', color:'#4a4a5a', font:{size:10} } } } }
+});
+
+// % PBI por país
+new Chart(document.getElementById('c-pbi-paises'), {
+  type: 'bar',
+  data: {
+    labels: ['Bolivia','México','Perú','Colombia','Chile','Brasil','Argentina','España','Alemania','Suecia'],
+    datasets: [{
+      label: '% del PBI',
+      data: [23.2, 22.6, 20.4, 19.8, 18.5, 17.2, 16.4, 14.0, 11.5, 9.2],
+      backgroundColor: [
+        '#cc6a6acc','#ba7a7acc','#e8a598','#a88a8a','#9a8a8a','#8a8a9a','#7a8a9a','#6a8a9a','#5a8a9a','#4a7a8a'
+      ],
+      borderRadius: 4
+    }]
+  },
+  options: {
+    ...base,
+    indexAxis: 'y',
+    plugins: { ...base.plugins, legend: { display: false } },
+    scales: { x: { ...base.scales.x, title: { display: true, text: '% PBI', color:'#4a4a5a', font:{size:10} } }, y: base.scales.y }
+  }
+});
+
+// Carga total
+new Chart(document.getElementById('c-carga-total'), {
+  type: 'bar',
+  data: {
+    labels: ['Hombres','Mujeres'],
+    datasets: [
+      { label: 'Trabajo remunerado (h/sem)', data: [43, 32], backgroundColor: M, borderRadius: 4 },
+      { label: 'Trabajo no remunerado (h/sem)', data: [11, 34], backgroundColor: F, borderRadius: 4 }
+    ]
+  },
+  options: {
+    ...base,
+    plugins: { ...base.plugins },
+    scales: {
+      x: { ...base.scales.x, stacked: true },
+      y: { ...base.scales.y, stacked: true, title: { display: true, text: 'Horas semanales', color:'#4a4a5a', font:{size:10} } }
+    }
+  }
+});
+
+// ──────────────────────────────────────────
+// TABS
+// ──────────────────────────────────────────
+function switchTab(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+</script>
+</body>
+</html>
